@@ -1,7 +1,8 @@
-import { AuthGuard } from '@nestjs/passport';
+import { CanActivate, Type } from '@nestjs/common';
 
-export class RtGuard extends AuthGuard('jwt-refresh') {
-  constructor() {
-    super();
-  }
-}
+import { createStrategyGuard } from './strategy.guard';
+
+/** Builds the refresh token guard of an authentication domain. */
+export const createRefreshTokenGuard = (
+	strategyName: string,
+): Type<CanActivate> => createStrategyGuard(strategyName);
