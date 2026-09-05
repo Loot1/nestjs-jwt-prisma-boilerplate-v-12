@@ -1,3 +1,3 @@
-export * from './strategy.guard';
-export * from './at.guard';
-export * from './rt.guard';
+export * from './strategy.guard.js';
+export * from './at.guard.js';
+export * from './rt.guard.js';

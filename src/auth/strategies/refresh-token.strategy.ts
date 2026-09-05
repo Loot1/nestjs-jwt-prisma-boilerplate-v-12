@@ -4,8 +4,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { JwtAuthOptions } from '../config';
-import { JwtPayload, JwtPayloadWithRt } from '../types';
+import { JwtAuthOptions } from '../config/index.js';
+import { JwtPayload, JwtPayloadWithRt } from '../types/index.js';
 
 /** Builds the refresh token strategy of an authentication domain. */
 export function createRefreshTokenStrategy(

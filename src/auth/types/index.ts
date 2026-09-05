@@ -1,3 +1,3 @@
-export * from './tokens.type';
-export * from './jwt-payload.type';
-export * from './auth-user.type';
+export * from './tokens.type.js';
+export * from './jwt-payload.type.js';
+export * from './auth-user.type.js';

@@ -1,9 +1,9 @@
 import { ForbiddenException } from '@nestjs/common';
 
-import { AuthCredentials, AuthUser, Tokens } from '../types';
-import { isUniqueConstraintViolation } from '../utils';
-import { HashingService } from './hashing.service';
-import { TokenService } from './token.service';
+import { AuthCredentials, AuthUser, Tokens } from '../types/index.js';
+import { isUniqueConstraintViolation } from '../utils/index.js';
+import { HashingService } from './hashing.service.js';
+import { TokenService } from './token.service.js';
 
 /**
  * Local (email + password) authentication flow, storage agnostic.

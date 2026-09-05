@@ -1,1 +1,1 @@
-export * from './jwt-auth.options';
+export * from './jwt-auth.options.js';

@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { JwtAuthOptions } from '../config';
-import { JwtPayload } from '../types';
+import { JwtAuthOptions } from '../config/index.js';
+import { JwtPayload } from '../types/index.js';
 
 /**
  * Builds the access token strategy of an authentication domain. The passport

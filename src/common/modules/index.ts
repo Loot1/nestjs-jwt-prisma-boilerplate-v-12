@@ -1,1 +1,1 @@
-export * from './auth-domain';
+export * from './auth-domain.js';

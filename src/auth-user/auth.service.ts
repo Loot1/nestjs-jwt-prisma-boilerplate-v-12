@@ -4,9 +4,9 @@ import {
 	BaseAuthService,
 	HashingService,
 	TokenService,
-} from '../auth/services';
-import { AuthUser } from '../auth/types';
-import { PrismaService } from '../prisma/prisma.service';
+} from '../auth/services/index.js';
+import { AuthUser } from '../auth/types/index.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 /**
  * Local auth flow backed by the Prisma `user` model. The flow itself lives in

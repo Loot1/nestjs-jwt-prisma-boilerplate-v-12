@@ -1,1 +1,1 @@
-export * from './auth.controller.factory';
+export * from './auth.controller.factory.js';

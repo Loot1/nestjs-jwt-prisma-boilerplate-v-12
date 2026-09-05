@@ -5,22 +5,22 @@ import {
 	createJwtAuthOptions,
 	JWT_AUTH_OPTIONS,
 	JwtAuthOptions,
-} from '../../auth/config';
-import { createAuthController } from '../controllers';
+} from '../../auth/config/index.js';
+import { createAuthController } from '../controllers/index.js';
 import {
 	createAccessTokenGuard,
 	createRefreshTokenGuard,
 	createStrategyGuard,
-} from '../guards';
+} from '../guards/index.js';
 import {
 	BaseAuthService,
 	HashingService,
 	TokenService,
-} from '../../auth/services';
+} from '../../auth/services/index.js';
 import {
 	createAccessTokenStrategy,
 	createRefreshTokenStrategy,
-} from '../../auth/strategies';
+} from '../../auth/strategies/index.js';
 
 export type AuthDomainConfig = {
 	/** Service handling the flow, usually a `BaseAuthService` subclass. */

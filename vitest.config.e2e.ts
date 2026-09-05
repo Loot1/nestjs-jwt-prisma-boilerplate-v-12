@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import { loadTestEnv } from './test/test-env';
+import { loadTestEnv } from './test/test-env.js';
 
 export default defineConfig({
   plugins: [tsconfigPaths()],

@@ -1,3 +1,3 @@
-export * from './hashing.service';
-export * from './token.service';
-export * from './base-auth.service';
+export * from './hashing.service.js';
+export * from './token.service.js';
+export * from './base-auth.service.js';

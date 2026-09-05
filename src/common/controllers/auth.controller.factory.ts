@@ -11,10 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { GetCurrentUser, GetCurrentUserId, Public } from '../decorators';
-import { AuthDto } from '../../auth/dto';
-import { BaseAuthService } from '../../auth/services';
-import { Tokens } from '../../auth/types';
+import { GetCurrentUser, GetCurrentUserId, Public } from '../decorators/index.js';
+import { AuthDto } from '../../auth/dto/index.js';
+import { BaseAuthService } from '../../auth/services/index.js';
+import { Tokens } from '../../auth/types/index.js';
 
 export type AuthControllerOptions = {
 	/** Route prefix, e.g. `auth` or `admin/auth`. */

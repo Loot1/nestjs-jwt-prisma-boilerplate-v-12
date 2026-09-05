@@ -1,5 +1,5 @@
-import { createAuthDomain } from '../common/modules';
-import { AuthService } from './auth.service';
+import { createAuthDomain } from '../common/modules/index.js';
+import { AuthService } from './auth.service.js';
 
 /**
  * Default (user) authentication domain: strategies, guards, services and the

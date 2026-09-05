@@ -7,11 +7,11 @@ import { INestApplication, Injectable, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from '../../app.module';
-import { PrismaService } from '../../prisma/prisma.service';
-import { createAuthDomain } from '../../common/modules';
-import { BaseAuthService, HashingService, TokenService } from '../services';
-import { AuthUser } from '../types';
+import { AppModule } from '../../app.module.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { createAuthDomain } from '../../common/modules/index.js';
+import { BaseAuthService, HashingService, TokenService } from '../services/index.js';
+import { AuthUser } from '../types/index.js';
 
 const rows: AuthUser[] = [];
 let seq = 100;

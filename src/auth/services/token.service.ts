@@ -2,9 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
-import { JWT_AUTH_OPTIONS } from '../config';
-import type { JwtAuthOptions } from '../config';
-import { JwtPayload, Tokens } from '../types';
+import { JWT_AUTH_OPTIONS } from '../config/index.js';
+import type { JwtAuthOptions } from '../config/index.js';
+import { JwtPayload, Tokens } from '../types/index.js';
 
 /**
  * Signs the access/refresh token pair for one authentication domain.

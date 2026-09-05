@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { loadTestEnv } from './test-env';
+import { createRequire } from 'node:module';
+import { loadTestEnv } from './test-env.js';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Prepares the test database before any test file runs: the schema is brought
