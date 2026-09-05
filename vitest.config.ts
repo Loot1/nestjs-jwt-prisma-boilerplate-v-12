@@ -3,16 +3,13 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { loadTestEnv } from './test/test-env.js';
 
 export default defineConfig({
-  // Resolves the path aliases declared in tsconfig.json, including the ones
-  // added by `nest g library`.
-  plugins: [tsconfigPaths()],
-  test: {
-    globals: true,
-    root: './',
-    include: ['**/*.spec.ts'],
-    env: loadTestEnv(),
-    // The suites share a single database, so they cannot run concurrently.
-    fileParallelism: false,
-    globalSetup: ['./test/global-setup.ts'],
-  },
+	plugins: [tsconfigPaths()],
+	test: {
+		globals: true,
+		root: './',
+		// Unit tests only: they mock their dependencies and need no database.
+		// The suites hitting the real database live in `*.e2e-spec.ts`.
+		include: ['src/**/*.spec.ts'],
+		env: loadTestEnv(),
+	},
 });

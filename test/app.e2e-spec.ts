@@ -4,7 +4,7 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AuthDto } from '../src/auth/dto/index.js';
-import { Tokens } from '../src/auth/types/index.js';
+import { Tokens } from '../src/common/index.js';
 
 describe('AppController (e2e)', () => {
 	let app: INestApplication;

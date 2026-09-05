@@ -1,8 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { AuthCredentials } from '../types/index.js';
 
-export class AuthDto implements AuthCredentials {
+export class AuthDto {
 	@ApiProperty({ default: 'test@test.com' })
 	@IsNotEmpty()
 	@IsString()

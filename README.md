@@ -1,13 +1,14 @@
-# NestJs Jwt Authentication example with access token and refresh token - Integration and End-to-end tests included
+# NestJs Jwt Authentication example with access token and refresh token - Unit and End-to-end tests included
 
 This is an example of how to implement an authentication system in NestJs using passport.js, and json web tokens (JWT).
 
-The integration test of the auth building blocks lives in `src/auth/test`; the
-e2e tests are in the root `test` folder.
+`AuthService` is covered by unit tests next to it (`src/auth/auth.service.spec.ts`,
+no database needed); the e2e tests, which hit the real database, are in the root
+`test` folder.
 
 ```bash
-yarn test # run integration test
-yarn test:e2e # run e2e tests
+npm test # run unit tests
+npm run test:e2e # run e2e tests
 ```
 
 The code reflects what was explained in the video:
@@ -16,64 +17,43 @@ The code reflects what was explained in the video:
 
 ## Layout
 
-Authentication is split in two: `src/auth` says *what* authentication is, and
-`src/common` holds the factories that turn it into Nest artefacts. A second
-authentication domain (admins, partners...) therefore costs one call instead of
-a copy of the auth folder.
+`src/auth` holds one authentication domain, written plainly: no factory,
+no abstract base class. `src/common` only holds what is domain agnostic and is
+shared as is.
 
 ```
-src/auth/                  the auth kernel
-  config/                  createJwtAuthOptions(): strategy names, secret env vars, lifetimes
-  services/                BaseAuthService (the whole flow), TokenService, HashingService
-  strategies/              createAccessTokenStrategy() / createRefreshTokenStrategy()
-  types/  dto/  utils/     Tokens, JwtPayload, AuthUser, AuthDto...
-src/auth-user/             the default domain: its Prisma hooks and its module
+src/auth/                  the auth domain
+  auth.constants.ts        strategy names, secret env vars, token lifetimes
+  auth.controller.ts       signup / signin / logout / refresh
+  auth.service.ts          the flow, on top of the Prisma `user` model
+  auth.service.spec.ts     its unit tests
+  auth.module.ts           controller, service and both strategies
+  dto/  guards/  strategies/
 src/common/
-  modules/                 createAuthDomain(): assembles a whole domain
-  guards/  controllers/    the factories it builds on, usable on their own
+  services/                HashingService, TokenService, provided globally
+  types/                   Tokens, JwtPayload, JwtPayloadWithRt
   decorators/              @Public(), @GetCurrentUser(), @GetCurrentUserId()
 ```
 
-`BaseAuthService` carries signup / signin / logout / refresh; a subclass only
-implements 5 persistence hooks.
+`CommonModule` is `@Global()`, so `HashingService` and `TokenService` are
+injectable anywhere without importing anything. `TokenService.getTokens()` takes
+the signing options as an argument, which keeps it free of any domain.
 
-```ts
-// src/auth-user/auth.module.ts
-export const userAuthDomain = createAuthDomain({
-  authService: AuthService,
-  path: 'auth',
-  tag: 'auth',
-});
-
-export const AuthModule = userAuthDomain.module;
-```
-
-Each domain protects its own routes with its own guard, and
-`userAuthDomain.accessGuard` is the one registered as `APP_GUARD` in
-`app.module.ts`, so every other route of the app requires a user access token
-unless it is marked `@Public()`.
+`AccessTokenGuard` is registered as `APP_GUARD` in `app.module.ts`: every route
+requires a valid access token unless it is marked `@Public()`. `auth/refresh` is
+`@Public()` and carries `RefreshTokenGuard` instead, since it is reached with a
+refresh token.
 
 ### Adding a second domain
 
-```ts
-@Injectable()
-export class AdminAuthService extends BaseAuthService {
-  // createUser / findUserByEmail / findUserById
-  // saveRefreshTokenHash / clearRefreshTokenHash
-}
+Copy `src/auth` to, say, `src/auth-admin` and change three things:
 
-export const adminAuthDomain = createAuthDomain({
-  authService: AdminAuthService,
-  path: 'admin/auth',
-  jwt: {
-    accessTokenStrategyName: 'admin-jwt',
-    refreshTokenStrategyName: 'admin-jwt-refresh',
-    accessTokenSecretEnv: 'ADMIN_AT_SECRET',
-    refreshTokenSecretEnv: 'ADMIN_RT_SECRET',
-  },
-});
-```
+1. `auth.constants.ts`: other passport names (`admin-jwt`, `admin-jwt-refresh`)
+   and other secret env vars (`ADMIN_AT_SECRET`, `ADMIN_RT_SECRET`);
+2. `auth.service.ts`: the Prisma model the domain authenticates against;
+3. `auth.controller.ts`: the route prefix and the Swagger tag.
 
-Import `adminAuthDomain.module`, protect your own admin routes with
-`adminAuthDomain.strictAccessGuard`, and that is it. A runnable version of this
-example is checked in as `src/auth/test/multi-auth-domain.spec.ts`.
+Import the new module in `app.module.ts`. Its routes are protected by its own
+`AccessTokenGuard`, which the globally registered one does not replace: mark
+them `@Public()` and add `@UseGuards(AdminAccessTokenGuard)`, since the global
+guard runs the user strategy and would reject an admin token.
