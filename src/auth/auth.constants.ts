@@ -1,5 +1,3 @@
-import { TokenOptions } from '../common/index.js';
-
 /**
  * Everything that identifies this authentication domain. A second domain
  * (admins, partners...) is a copy of this folder with other names, other
@@ -8,12 +6,12 @@ import { TokenOptions } from '../common/index.js';
 export const AT_STRATEGY = 'jwt';
 export const RT_STRATEGY = 'jwt-refresh';
 
-export const AT_SECRET_ENV = 'AT_SECRET';
-export const RT_SECRET_ENV = 'RT_SECRET';
+/** Token lifetimes, in seconds: 15 minutes and 7 days. */
+export const AT_TTL = 15 * 60;
+export const RT_TTL = 7 * 24 * 60 * 60;
 
-export const TOKEN_OPTIONS: TokenOptions = {
-	accessTokenSecretEnv: AT_SECRET_ENV,
-	refreshTokenSecretEnv: RT_SECRET_ENV,
-	accessTokenExpiresIn: '15m',
-	refreshTokenExpiresIn: '7d',
-};
+/**
+ * How long the refresh token that was just rotated out is still accepted, in
+ * seconds, so that requests firing in parallel do not knock each other out.
+ */
+export const RT_GRACE = 30;

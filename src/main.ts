@@ -1,11 +1,21 @@
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module.js';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
+const CORS_ORIGINS: string[] = ['http://localhost:5173'];
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
+	const settings = app.get(ConfigService);
+
 	app.useGlobalPipes(new ValidationPipe());
+
+	if (CORS_ORIGINS.length > 0) {
+		app.enableCors({ origin: CORS_ORIGINS });
+	}
 
 	const config = new DocumentBuilder()
 		.setTitle('NestJs-JWTS')
@@ -21,6 +31,6 @@ async function bootstrap() {
 	const document = SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('api', app, document);
 
-	await app.listen(3333);
+	await app.listen(settings.getOrThrow<number>('PORT'));
 }
 bootstrap();

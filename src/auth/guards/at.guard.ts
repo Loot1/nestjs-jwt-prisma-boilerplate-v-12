@@ -5,10 +5,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../../common/index.js';
 import { AT_STRATEGY } from '../auth.constants.js';
 
-/**
- * Access token guard, registered globally in `app.module.ts`: every route
- * requires a valid access token unless it is marked `@Public()`.
- */
 @Injectable()
 export class AccessTokenGuard extends AuthGuard(AT_STRATEGY) {
 	constructor(private reflector: Reflector) {

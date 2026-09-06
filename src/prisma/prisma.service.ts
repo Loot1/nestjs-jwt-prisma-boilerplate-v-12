@@ -25,7 +25,8 @@ export class PrismaService
 	async cleanDatabase() {
 		if (process.env.NODE_ENV === 'production') return;
 
-		// teardown logic
-		return Promise.all([this.user.deleteMany()]);
+		// teardown logic; sessions first, they point at the users.
+		await this.session.deleteMany();
+		await this.user.deleteMany();
 	}
 }

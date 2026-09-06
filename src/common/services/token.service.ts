@@ -1,51 +1,64 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService, JwtSignOptions } from '@nestjs/jwt';
+import { JwtService } from '@nestjs/jwt';
 
-import { JwtPayload, Tokens } from '../types/index.js';
+import { JwtPayload, RefreshTokenPayload, Tokens } from '../types/index.js';
 
-/**
- * Signing options of one authentication domain. The secrets are read from the
- * environment at signing time, so a second domain only has to declare its own
- * variable names (see `src/auth/auth.constants.ts`).
- */
 export type TokenOptions = {
-	accessTokenSecretEnv: string;
-	refreshTokenSecretEnv: string;
-	accessTokenExpiresIn: JwtSignOptions['expiresIn'];
-	refreshTokenExpiresIn: JwtSignOptions['expiresIn'];
+	accessTokenSecret: string;
+	refreshTokenSecret: string;
+	accessTokenTtl: number;
+	refreshTokenTtl: number;
 };
 
-/** Signs the access/refresh token pair of an authentication domain. */
 @Injectable()
 export class TokenService {
-	constructor(
-		private readonly jwtService: JwtService,
-		private readonly config: ConfigService,
-	) {}
+	constructor(private readonly jwtService: JwtService) {}
+
+	signAccessToken(
+		payload: JwtPayload,
+		options: TokenOptions,
+	): Promise<string> {
+		return this.jwtService.signAsync(payload, {
+			secret: options.accessTokenSecret,
+			expiresIn: options.accessTokenTtl,
+		});
+	}
 
 	async getTokens(
 		payload: JwtPayload,
+		tokenId: string,
 		options: TokenOptions,
 	): Promise<Tokens> {
 		const [at, rt] = await Promise.all([
-			this.jwtService.signAsync(payload, {
-				secret: this.config.getOrThrow<string>(
-					options.accessTokenSecretEnv,
-				),
-				expiresIn: options.accessTokenExpiresIn,
-			}),
-			this.jwtService.signAsync(payload, {
-				secret: this.config.getOrThrow<string>(
-					options.refreshTokenSecretEnv,
-				),
-				expiresIn: options.refreshTokenExpiresIn,
-			}),
+			this.signAccessToken(payload, options),
+			this.jwtService.signAsync(
+				{ ...payload, jti: tokenId } satisfies RefreshTokenPayload,
+				{
+					secret: options.refreshTokenSecret,
+					expiresIn: options.refreshTokenTtl,
+				},
+			),
 		]);
 
 		return {
 			access_token: at,
 			refresh_token: rt,
 		};
+	}
+
+	async verifyRefreshToken(
+		token: string,
+		options: TokenOptions,
+	): Promise<RefreshTokenPayload> {
+		const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+			token,
+			{ secret: options.refreshTokenSecret },
+		);
+
+		if (!payload?.sid || !payload?.jti) {
+			throw new Error('Refresh token is missing its session claims');
+		}
+
+		return payload;
 	}
 }

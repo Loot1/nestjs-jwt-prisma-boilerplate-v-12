@@ -1,10 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+
 import { AppModule } from './../src/app.module.js';
-import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AuthDto } from '../src/auth/dto/index.js';
 import { Tokens } from '../src/common/index.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 
 describe('AppController (e2e)', () => {
 	let app: INestApplication;
@@ -60,7 +61,6 @@ describe('AppController (e2e)', () => {
 		});
 
 		it('should refresh tokens', async () => {
-			// wait for 1 second
 			await new Promise((resolve) => {
 				setTimeout(() => {
 					resolve(true);
@@ -79,6 +79,8 @@ describe('AppController (e2e)', () => {
 
 					expect(body.refresh_token).not.toBe(tokens.access_token);
 					expect(body.refresh_token).not.toBe(tokens.refresh_token);
+
+					tokens = body;
 				});
 		});
 
@@ -89,6 +91,88 @@ describe('AppController (e2e)', () => {
 					type: 'bearer',
 				})
 				.expect(200);
+		});
+	});
+
+	describe('Sessions', () => {
+		const dto: AuthDto = {
+			email: 'sessions@gmail.com',
+			password: 'super-secret-password',
+		};
+
+		let first: Tokens;
+		let second: Tokens;
+
+		beforeAll(async () => {
+			const signup = await request(app.getHttpServer())
+				.post('/auth/local/signup')
+				.send(dto)
+				.expect(201);
+			first = signup.body as Tokens;
+
+			const signin = await request(app.getHttpServer())
+				.post('/auth/local/signin')
+				.send(dto)
+				.expect(200);
+			second = signin.body as Tokens;
+		});
+
+		it('keeps both devices signed in', async () => {
+			const res = await request(app.getHttpServer())
+				.get('/auth/sessions')
+				.auth(first.access_token, { type: 'bearer' })
+				.expect(200);
+
+			expect((res.body as unknown[]).length).toBe(2);
+		});
+
+		it('lets parallel refreshes through on a single rotation', async () => {
+			const responses = await Promise.all(
+				Array.from({ length: 5 }, () =>
+					request(app.getHttpServer())
+						.post('/auth/refresh')
+						.auth(second.refresh_token, { type: 'bearer' }),
+				),
+			);
+
+			for (const res of responses) expect(res.status).toBe(200);
+		});
+
+		it('logs out one device without touching the other', async () => {
+			await request(app.getHttpServer())
+				.post('/auth/logout')
+				.auth(first.access_token, { type: 'bearer' })
+				.expect(200);
+
+			await request(app.getHttpServer())
+				.post('/auth/refresh')
+				.auth(first.refresh_token, { type: 'bearer' })
+				.expect(403);
+
+			const res = await request(app.getHttpServer())
+				.get('/auth/sessions')
+				.auth(second.access_token, { type: 'bearer' })
+				.expect(200);
+
+			expect((res.body as unknown[]).length).toBe(1);
+		});
+
+		it('revokes the session on a token replayed past the grace window', async () => {
+			await prisma.session.updateMany({
+				where: { user: { email: dto.email } },
+				data: { rotatedAt: new Date(0) },
+			});
+
+			await request(app.getHttpServer())
+				.post('/auth/refresh')
+				.auth(second.refresh_token, { type: 'bearer' })
+				.expect(403);
+
+			expect(
+				await prisma.session.count({
+					where: { user: { email: dto.email } },
+				}),
+			).toBe(0);
 		});
 	});
 });

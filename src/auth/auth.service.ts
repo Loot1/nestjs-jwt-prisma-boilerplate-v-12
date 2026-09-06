@@ -1,25 +1,59 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
-import { HashingService, Tokens, TokenService } from '../common/index.js';
+import {
+	HashingService,
+	JwtPayload,
+	RefreshTokenPayload,
+	TokenOptions,
+	Tokens,
+	TokenService,
+} from '../common/index.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { TOKEN_OPTIONS } from './auth.constants.js';
+import { AT_TTL, RT_GRACE, RT_TTL } from './auth.constants.js';
 import { AuthDto } from './dto/index.js';
+import {
+	SessionMetadata,
+	SessionService,
+	SessionWithUser,
+} from './session.service.js';
 
-/** True when the error is a Prisma unique constraint violation (P2002). */
 const isDuplicateUser = (error: unknown): boolean =>
 	error instanceof PrismaClientKnownRequestError && error.code === 'P2002';
 
-/** Local (email + password) authentication flow backed by the `user` model. */
+const isLive = (session: SessionWithUser | null): session is SessionWithUser =>
+	session !== null && session.expiresAt > new Date();
+
+const payloadOf = (session: SessionWithUser): JwtPayload => ({
+	sub: session.user.id,
+	email: session.user.email,
+	sid: session.id,
+});
+
 @Injectable()
 export class AuthService {
+	private readonly tokens: TokenOptions;
+
 	constructor(
 		private prisma: PrismaService,
+		private sessions: SessionService,
 		private tokenService: TokenService,
 		private hashingService: HashingService,
-	) {}
+		config: ConfigService,
+	) {
+		this.tokens = {
+			accessTokenSecret: config.getOrThrow<string>('AT_SECRET'),
+			refreshTokenSecret: config.getOrThrow<string>('RT_SECRET'),
+			accessTokenTtl: AT_TTL,
+			refreshTokenTtl: RT_TTL,
+		};
+	}
 
-	async signupLocal(dto: AuthDto): Promise<Tokens> {
+	async signupLocal(
+		dto: AuthDto,
+		metadata?: SessionMetadata,
+	): Promise<Tokens> {
 		const hash = await this.hashingService.hash(dto.password);
 
 		const user = await this.prisma.user
@@ -35,10 +69,13 @@ export class AuthService {
 				throw error;
 			});
 
-		return this.issueTokens(user.id, user.email);
+		return this.openSession(user.id, user.email, metadata);
 	}
 
-	async signinLocal(dto: AuthDto): Promise<Tokens> {
+	async signinLocal(
+		dto: AuthDto,
+		metadata?: SessionMetadata,
+	): Promise<Tokens> {
 		const user = await this.prisma.user.findUnique({
 			where: {
 				email: dto.email,
@@ -52,57 +89,104 @@ export class AuthService {
 		);
 		if (!passwordMatches) throw new ForbiddenException('Access Denied');
 
-		return this.issueTokens(user.id, user.email);
+		return this.openSession(user.id, user.email, metadata);
 	}
 
-	async logout(userId: number): Promise<boolean> {
-		await this.prisma.user.updateMany({
-			where: {
-				id: userId,
-				hashedRt: {
-					not: null,
-				},
-			},
-			data: {
-				hashedRt: null,
-			},
-		});
+	async logout(sessionId: string): Promise<boolean> {
+		await this.sessions.revoke(sessionId);
 
 		return true;
 	}
 
-	async refreshTokens(userId: number, rt: string): Promise<Tokens> {
-		const user = await this.prisma.user.findUnique({
-			where: {
-				id: userId,
-			},
-		});
-		if (!user || !user.hashedRt)
-			throw new ForbiddenException('Access Denied');
+	async logoutEverywhere(userId: number): Promise<boolean> {
+		await this.sessions.revokeAll(userId);
 
-		const rtMatches = await this.hashingService.verify(user.hashedRt, rt);
-		if (!rtMatches) throw new ForbiddenException('Access Denied');
-
-		return this.issueTokens(user.id, user.email);
+		return true;
 	}
 
-	/** Signs a fresh pair and rotates the stored refresh token hash. */
-	private async issueTokens(userId: number, email: string): Promise<Tokens> {
-		const tokens = await this.tokenService.getTokens(
-			{ sub: userId, email },
-			TOKEN_OPTIONS,
+	async refresh(refreshToken: string): Promise<Tokens> {
+		let payload: RefreshTokenPayload;
+		try {
+			payload = await this.tokenService.verifyRefreshToken(
+				refreshToken,
+				this.tokens,
+			);
+		} catch {
+			throw new ForbiddenException('Access Denied');
+		}
+
+		let session = await this.sessions.find(payload.sid);
+		if (!isLive(session)) throw new ForbiddenException('Access Denied');
+
+		if (payload.jti === session.tokenId) {
+			const tokenId = await this.sessions.rotate(
+				session.id,
+				session.tokenId,
+				this.tokens.refreshTokenTtl,
+			);
+			if (tokenId) return this.signRotated(session, tokenId);
+
+			session = await this.sessions.find(payload.sid);
+			if (!isLive(session)) throw new ForbiddenException('Access Denied');
+		}
+
+		if (this.isInGraceWindow(payload, session)) {
+			return this.signAccessOnly(session, refreshToken);
+		}
+
+		await this.sessions.revoke(session.id);
+		throw new ForbiddenException('Access Denied');
+	}
+
+	private isInGraceWindow(
+		payload: RefreshTokenPayload,
+		session: { prevTokenId: string | null; rotatedAt: Date },
+	): boolean {
+		return (
+			payload.jti === session.prevTokenId &&
+			Date.now() - session.rotatedAt.getTime() <= RT_GRACE * 1000
+		);
+	}
+
+	private signRotated(
+		session: SessionWithUser,
+		tokenId: string,
+	): Promise<Tokens> {
+		return this.tokenService.getTokens(
+			payloadOf(session),
+			tokenId,
+			this.tokens,
+		);
+	}
+
+	private async signAccessOnly(
+		session: SessionWithUser,
+		refreshToken: string,
+	): Promise<Tokens> {
+		return {
+			access_token: await this.tokenService.signAccessToken(
+				payloadOf(session),
+				this.tokens,
+			),
+			refresh_token: refreshToken,
+		};
+	}
+
+	private async openSession(
+		userId: number,
+		email: string,
+		metadata?: SessionMetadata,
+	): Promise<Tokens> {
+		const session = await this.sessions.create(
+			userId,
+			this.tokens.refreshTokenTtl,
+			metadata,
 		);
 
-		const hashedRt = await this.hashingService.hash(tokens.refresh_token);
-		await this.prisma.user.update({
-			where: {
-				id: userId,
-			},
-			data: {
-				hashedRt,
-			},
-		});
-
-		return tokens;
+		return this.tokenService.getTokens(
+			{ sub: userId, email, sid: session.id },
+			session.tokenId,
+			this.tokens,
+		);
 	}
 }

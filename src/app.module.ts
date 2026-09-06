@@ -4,14 +4,18 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { AuthModule } from './auth/auth.module.js';
 import { AccessTokenGuard } from './auth/guards/index.js';
-import { CommonModule } from './common/index.js';
-import { PrismaModule } from './prisma/prisma.module.js';
+import { validate } from './config/index.js';
 
 @Module({
 	imports: [
-		ConfigModule.forRoot({ isGlobal: true }),
-		CommonModule,
-		PrismaModule,
+		ConfigModule.forRoot({
+			isGlobal: true,
+			cache: true,
+			// A missing or weak secret stops the boot instead of the first
+			// request that happens to need it. Everything downstream then
+			// reads its values through `ConfigService`.
+			validate,
+		}),
 		AuthModule,
 	],
 	providers: [
