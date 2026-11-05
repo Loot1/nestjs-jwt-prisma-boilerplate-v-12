@@ -38,7 +38,27 @@ token is treated as leaked and the whole session is revoked.
 `ConfigModule.forRoot()` in `app.module.ts` validates the whole environment at
 boot (`src/config/env.validation.ts`): a missing `DATABASE_URL` or a secret
 under 32 characters stops the startup instead of the first request that needs
-it. Copy `.env.example` and generate the secrets with `openssl rand -hex 32`.
+it.
+
+Every environment file lives in the `.env/` folder. Only `.env/.env.example`
+is committed: copy it to each of the others and generate the secrets with
+`openssl rand -hex 32`.
+
+| File             | Read by                                                  |
+| ---------------- | -------------------------------------------------------- |
+| `.env/.env.dev`  | `start`, `start:dev`, `start:debug`, `db:*:dev`          |
+| `.env/.env.prod` | `start:prod`, `db:migrate:prod`                          |
+| `.env/.env.test` | `test`, `test:e2e` (a database of its own, wiped by e2e) |
+
+Nothing loads a file implicitly (`ignoreEnvFile` in `ConfigModule`, no
+`dotenv` in `prisma.config.ts`): every script passes its own with
+`--env-file`, so a command always says which database it targets.
+
+```sh
+npm run db:migrate:dev    # prisma migrate dev, on the dev database
+npm run start:dev
+npm run build && npm run db:migrate:prod && npm run start:prod
+```
 
 It is registered globally, so anything that needs a value simply injects
 `ConfigService` and reads it:
