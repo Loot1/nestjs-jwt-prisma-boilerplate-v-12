@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module.js';
@@ -8,7 +9,10 @@ import { AppModule } from './app.module.js';
 const CORS_ORIGINS: string[] = ['http://localhost:5173'];
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule);
+	const app = await NestFactory.create<NestNodeApplication>(
+		AppModule,
+		new NodeAdapter(),
+	);
 	const settings = app.get(ConfigService);
 
 	app.useGlobalPipes(new ValidationPipe());

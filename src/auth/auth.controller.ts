@@ -9,7 +9,7 @@ import {
 	UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { NodeRequest } from '@nestjs/platform-node';
 
 import {
 	GetCurrentUser,
@@ -22,8 +22,8 @@ import { AuthDto } from './dto/index.js';
 import { RefreshTokenGuard } from './guards/index.js';
 import { SessionMetadata, SessionService } from './session.service.js';
 
-const deviceOf = (req: Request): SessionMetadata => ({
-	userAgent: req.get('user-agent'),
+const deviceOf = (req: NodeRequest): SessionMetadata => ({
+	userAgent: req.headers['user-agent'],
 	ip: req.ip,
 });
 
@@ -39,7 +39,7 @@ export class AuthController {
 	@Post('local/signup')
 	@HttpCode(HttpStatus.CREATED)
 	@ApiOperation({ summary: 'Sign up' })
-	signupLocal(@Body() dto: AuthDto, @Req() req: Request): Promise<Tokens> {
+	signupLocal(@Body() dto: AuthDto, @Req() req: NodeRequest): Promise<Tokens> {
 		return this.authService.signupLocal(dto, deviceOf(req));
 	}
 
@@ -47,7 +47,7 @@ export class AuthController {
 	@Post('local/signin')
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Sign in' })
-	signinLocal(@Body() dto: AuthDto, @Req() req: Request): Promise<Tokens> {
+	signinLocal(@Body() dto: AuthDto, @Req() req: NodeRequest): Promise<Tokens> {
 		return this.authService.signinLocal(dto, deviceOf(req));
 	}
 

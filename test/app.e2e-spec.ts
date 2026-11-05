@@ -1,4 +1,5 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
+import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -8,7 +9,7 @@ import { Tokens } from '../src/common/index.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 describe('AppController (e2e)', () => {
-	let app: INestApplication;
+	let app: NestNodeApplication;
 	let prisma: PrismaService;
 
 	beforeAll(async () => {
@@ -16,7 +17,9 @@ describe('AppController (e2e)', () => {
 			imports: [AppModule],
 		}).compile();
 
-		app = moduleFixture.createNestApplication();
+		app = moduleFixture.createNestApplication<NestNodeApplication>(
+			new NodeAdapter(),
+		);
 		app.useGlobalPipes(new ValidationPipe());
 		await app.init();
 
