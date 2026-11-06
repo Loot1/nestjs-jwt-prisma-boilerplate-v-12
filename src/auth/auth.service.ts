@@ -12,7 +12,7 @@ import {
 } from '../common/index.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AT_TTL, RT_GRACE, RT_TTL } from './auth.constants.js';
-import { AuthDto } from './dto/index.js';
+import type { AuthDto } from './dto/index.js';
 import {
 	SessionMetadata,
 	SessionService,

@@ -4,7 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { AuthModule } from './auth/auth.module.js';
 import { AccessTokenGuard } from './auth/guards/index.js';
-import { validate } from './config/index.js';
+import { envSchema } from './config/index.js';
 
 @Module({
 	imports: [
@@ -17,7 +17,7 @@ import { validate } from './config/index.js';
 			// A missing or weak secret stops the boot instead of the first
 			// request that happens to need it. Everything downstream then
 			// reads its values through `ConfigService`.
-			validate,
+			validationSchema: envSchema,
 		}),
 		AuthModule,
 	],

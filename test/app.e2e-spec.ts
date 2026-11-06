@@ -1,10 +1,10 @@
-import { ValidationPipe } from '@nestjs/common';
+import { StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 
 import { AppModule } from './../src/app.module.js';
-import { AuthDto } from '../src/auth/dto/index.js';
+import type { AuthDto } from '../src/auth/dto/index.js';
 import { Tokens } from '../src/common/index.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
@@ -20,7 +20,7 @@ describe('AppController (e2e)', () => {
 		app = moduleFixture.createNestApplication<NestNodeApplication>(
 			new NodeAdapter(),
 		);
-		app.useGlobalPipes(new ValidationPipe());
+		app.useGlobalPipes(new StandardSchemaValidationPipe());
 		await app.init();
 
 		prisma = app.get<PrismaService>(PrismaService);
@@ -47,6 +47,18 @@ describe('AppController (e2e)', () => {
 				.expect(({ body }: { body: Tokens }) => {
 					expect(body.access_token).toBeTruthy();
 					expect(body.refresh_token).toBeTruthy();
+				});
+		});
+
+		it('rejects a body that fails the schema', () => {
+			return request(app.getHttpServer())
+				.post('/auth/local/signup')
+				.send({ email: '', password: 42 })
+				.expect(400)
+				.expect(({ body }: { body: { message: string[] } }) => {
+					expect(body.message).toHaveLength(2);
+					expect(body.message[0]).toMatch(/^email: /);
+					expect(body.message[1]).toMatch(/^password: /);
 				});
 		});
 

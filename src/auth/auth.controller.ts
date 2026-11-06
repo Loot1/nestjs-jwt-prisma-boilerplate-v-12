@@ -18,7 +18,7 @@ import {
 	Tokens,
 } from '../common/index.js';
 import { AuthService } from './auth.service.js';
-import { AuthDto } from './dto/index.js';
+import { authSchema, type AuthDto } from './dto/index.js';
 import { RefreshTokenGuard } from './guards/index.js';
 import { SessionMetadata, SessionService } from './session.service.js';
 
@@ -39,7 +39,10 @@ export class AuthController {
 	@Post('local/signup')
 	@HttpCode(HttpStatus.CREATED)
 	@ApiOperation({ summary: 'Sign up' })
-	signupLocal(@Body() dto: AuthDto, @Req() req: NodeRequest): Promise<Tokens> {
+	signupLocal(
+		@Body({ schema: authSchema }) dto: AuthDto,
+		@Req() req: NodeRequest,
+	): Promise<Tokens> {
 		return this.authService.signupLocal(dto, deviceOf(req));
 	}
 
@@ -47,7 +50,10 @@ export class AuthController {
 	@Post('local/signin')
 	@HttpCode(HttpStatus.OK)
 	@ApiOperation({ summary: 'Sign in' })
-	signinLocal(@Body() dto: AuthDto, @Req() req: NodeRequest): Promise<Tokens> {
+	signinLocal(
+		@Body({ schema: authSchema }) dto: AuthDto,
+		@Req() req: NodeRequest,
+	): Promise<Tokens> {
 		return this.authService.signinLocal(dto, deviceOf(req));
 	}
 

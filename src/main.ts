@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { StandardSchemaValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
@@ -15,7 +15,7 @@ async function bootstrap() {
 	);
 	const settings = app.get(ConfigService);
 
-	app.useGlobalPipes(new ValidationPipe());
+	app.useGlobalPipes(new StandardSchemaValidationPipe());
 
 	if (CORS_ORIGINS.length > 0) {
 		app.enableCors({ origin: CORS_ORIGINS });

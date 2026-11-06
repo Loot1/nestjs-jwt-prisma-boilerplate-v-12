@@ -36,9 +36,19 @@ token is treated as leaked and the whole session is revoked.
 ## Configuration
 
 `ConfigModule.forRoot()` in `app.module.ts` validates the whole environment at
-boot (`src/config/env.validation.ts`): a missing `DATABASE_URL` or a secret
-under 32 characters stops the startup instead of the first request that needs
-it.
+boot against a zod schema (`validationSchema`, `src/config/env.validation.ts`):
+a missing `DATABASE_URL` or a secret under 32 characters stops the startup
+instead of the first request that needs it.
+
+## Validation
+
+There is no class-validator: request bodies are checked by zod schemas through
+NestJS 12's Standard Schema support. A schema is passed to the parameter
+decorator, `@Body({ schema: authSchema })`, and the global
+`StandardSchemaValidationPipe` (`main.ts`) validates against it, answering
+`400` with one `path: message` per issue. The DTO is the schema's inferred type
+(`z.infer`), and `@nestjs/swagger` builds the request body documentation from
+the same schema, so nothing has to be declared twice. Unknown keys are stripped.
 
 Every environment file lives in the `.env/` folder. Only `.env/.env.example`
 is committed: copy it to each of the others and generate the secrets with

@@ -1,69 +1,24 @@
-import { plainToInstance } from 'class-transformer';
-import {
-	IsEnum,
-	IsInt,
-	IsNotEmpty,
-	IsOptional,
-	IsString,
-	Min,
-	MinLength,
-	validateSync,
-} from 'class-validator';
+import { z } from 'zod';
 
-export enum NodeEnv {
-	Development = 'development',
-	Production = 'production',
-	Test = 'test',
-}
+const secret = (name: string) =>
+	z
+		.string()
+		.min(32, `${name} must be at least 32 characters (openssl rand -hex 32).`);
 
-export class EnvironmentVariables {
-	@IsOptional()
-	@IsEnum(NodeEnv)
-	NODE_ENV: NodeEnv = NodeEnv.Development;
+/**
+ * Every variable the app reads, checked at boot by `ConfigModule`
+ * (`validationSchema`). Variables it doesn't declare stay readable as they
+ * are; the ones it declares are served as parsed here (`PORT` is a number).
+ */
+export const envSchema = z.object({
+	NODE_ENV: z
+		.enum(['development', 'production', 'test'])
+		.default('development'),
+	PORT: z.coerce.number().int().min(1).default(3333),
+	DATABASE_URL: z.string().min(1),
+	SHADOW_DATABASE_URL: z.string().optional(),
+	AT_SECRET: secret('AT_SECRET'),
+	RT_SECRET: secret('RT_SECRET'),
+});
 
-	@IsOptional()
-	@IsInt()
-	@Min(1)
-	PORT: number = 3333;
-
-	@IsString()
-	@IsNotEmpty()
-	DATABASE_URL: string;
-
-	@IsOptional()
-	@IsString()
-	SHADOW_DATABASE_URL?: string;
-
-	@IsString()
-	@MinLength(32, {
-		message:
-			'AT_SECRET must be at least 32 characters (openssl rand -hex 32).',
-	})
-	AT_SECRET: string;
-
-	@IsString()
-	@MinLength(32, {
-		message:
-			'RT_SECRET must be at least 32 characters (openssl rand -hex 32).',
-	})
-	RT_SECRET: string;
-}
-
-export function validate(
-	config: Record<string, unknown>,
-): Record<string, unknown> {
-	const validated = plainToInstance(EnvironmentVariables, config, {
-		enableImplicitConversion: true,
-		exposeDefaultValues: true,
-	});
-
-	const errors = validateSync(validated, { skipMissingProperties: false });
-	if (errors.length > 0) {
-		const details = errors
-			.map((error) => Object.values(error.constraints ?? {}).join(', '))
-			.join('\n  - ');
-		throw new Error(`Invalid environment:\n  - ${details}`);
-	}
-
-	return { ...config, ...validated };
-}
+export type Env = z.infer<typeof envSchema>;

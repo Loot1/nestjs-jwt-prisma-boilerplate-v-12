@@ -1,14 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { z } from 'zod';
 
-export class AuthDto {
-	@ApiProperty({ default: 'test@test.com' })
-	@IsNotEmpty()
-	@IsString()
-	email: string;
+/**
+ * Validates the body (`@Body({ schema: authSchema })`), types it, and is what
+ * Swagger documents: there is no class next to it to keep in sync.
+ */
+export const authSchema = z.object({
+	email: z.string().min(1).meta({ example: 'test@test.com' }),
+	password: z.string().min(1).meta({ example: 'test1234' }),
+});
 
-	@ApiProperty({ default: 'test1234' })
-	@IsNotEmpty()
-	@IsString()
-	password: string;
-}
+export type AuthDto = z.infer<typeof authSchema>;
